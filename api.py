@@ -6,7 +6,7 @@ from db import SessionLocal, init_db
 
 #api para el juego de rol
 # Inicializa la base de datos y las tablas
-
+#? ejecuar con el comando: fastapi dev run api.py
 
 app = FastAPI()
 
