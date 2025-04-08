@@ -2,18 +2,18 @@ from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from base_rpg import Personaje, Mision, MisionPersonaje, ColaMisiones
 from db import SessionLocal, init_db
+from contextlib import asynccontextmanager
+
+#? para iniciar la API:
+#*uvicorn api:app --reload
 
 
-#api para el juego de rol
-# Inicializa la base de datos y las tablas
-#? ejecuar con el comando: fastapi dev run api.py
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()  # Inicializa la DB en el arranque
+    yield
 
-app = FastAPI()
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
-
+app = FastAPI(lifespan=lifespan)
 
 def get_db():
     db = SessionLocal()
@@ -35,7 +35,7 @@ def crear_mision(nombre: str, descripcion: str, experiencia: int, db: Session = 
     nueva = Mision(
         nombre=nombre,
         descripcion=descripcion,
-        experiencia_otorgada=experiencia,  
+        experiencia_otorgada=experiencia,
         estado="pendiente"
     )
     db.add(nueva)
@@ -45,7 +45,7 @@ def crear_mision(nombre: str, descripcion: str, experiencia: int, db: Session = 
 
 @app.post("/personajes/{personaje_id}/misiones/{mision_id}")
 def aceptar_mision(personaje_id: int, mision_id: int, db: Session = Depends(get_db)):
-    personaje = db.query(Personaje).get(personaje_id)
+    personaje = db.get(Personaje, personaje_id)
     if not personaje:
         raise HTTPException(status_code=404, detail="Personaje no encontrado")
 
@@ -58,7 +58,7 @@ def aceptar_mision(personaje_id: int, mision_id: int, db: Session = Depends(get_
 
 @app.post("/personajes/{personaje_id}/completar")
 def completar_mision(personaje_id: int, db: Session = Depends(get_db)):
-    personaje = db.query(Personaje).get(personaje_id)
+    personaje = db.get(Personaje, personaje_id)
     if not personaje:
         raise HTTPException(status_code=404, detail="Personaje no encontrado")
 
@@ -68,18 +68,18 @@ def completar_mision(personaje_id: int, db: Session = Depends(get_db)):
     if not primera:
         raise HTTPException(status_code=400, detail="No hay misiones")
 
-    mision = db.query(Mision).get(primera.mision_id)
+    mision = db.get(Mision, primera.mision_id)
     mision.estado = "completada"
-    personaje.experiencia += mision.experiencia_otorgada  
+    personaje.experiencia += mision.experiencia_otorgada
 
-    db.delete(primera)  
+    db.delete(primera)
     db.commit()
 
     return {"msg": f"Misión completada. XP ganada: {mision.experiencia_otorgada}"}
 
 @app.get("/personajes/{personaje_id}/misiones")
 def listar_misiones(personaje_id: int, db: Session = Depends(get_db)):
-    personaje = db.query(Personaje).get(personaje_id)
+    personaje = db.get(Personaje, personaje_id)
     if not personaje:
         raise HTTPException(status_code=404, detail="Personaje no encontrado")
 
@@ -87,10 +87,3 @@ def listar_misiones(personaje_id: int, db: Session = Depends(get_db)):
     resultado = [{"id": mp.mision.id, "nombre": mp.mision.nombre, "orden": mp.orden} for mp in misiones]
 
     return resultado
-
-
-@app.get("/personajes")
-def listar_personajes(db: Session = Depends(get_db)):
-    personajes = db.query(Personaje).all()
-    return personajes
-
