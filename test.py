@@ -8,6 +8,10 @@ from db import init_db
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
+#pytest -s --log-cli-level=INFO test.py (este si los muestra bien xd)
+#pytest -s -o log_cli_level=INFO test.py
+
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
