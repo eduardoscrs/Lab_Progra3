@@ -87,3 +87,9 @@ def listar_misiones(personaje_id: int, db: Session = Depends(get_db)):
     resultado = [{"id": mp.mision.id, "nombre": mp.mision.nombre, "orden": mp.orden} for mp in misiones]
 
     return resultado
+
+@app.get("/misiones")
+def listar_misiones(db: Session = Depends(get_db)):
+    misiones = db.query(Mision).all()
+    resultado = [{"id": m.id, "nombre": m.nombre, "descripcion": m.descripcion, "experiencia_otorgada": m.experiencia_otorgada, "estado": m.estado} for m in misiones]
+    return resultado

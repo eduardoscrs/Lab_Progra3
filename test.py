@@ -1,30 +1,32 @@
 import pytest
+import logging
 from fastapi.testclient import TestClient
 from api import app
 from db import init_db
 
-#* Ejecutar el test para ver cómo funciona el FIFO:
-#* pytest -s test.py
+# Configuración del logger
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup():
-    print("🔄 Inicializando base de datos...")
+    logger.info("🔄 Inicializando base de datos...")
     init_db()
 
 def test_fifo_misiones():
-    print("🧪 Iniciando test de misiones FIFO")
+    logger.info("🧪 Iniciando test de misiones FIFO")
 
     # 1. Crear personaje
-    print("👤 Creando personaje...")
-    res = client.post("/personajes", params={"nombre": "TestHero"})
+    logger.info("👤 Creando personaje...")
+    res = client.post("/personajes", params={"nombre": "HeroCaro"})
     personaje = res.json()
-    print("✅ Personaje creado:", personaje)
+    logger.info("✅ Personaje creado: %s", personaje)
     personaje_id = personaje["id"]
 
     # 2. Crear misiones
-    print("🛠️ Creando misiones...")
+    logger.info("🛠️ Creando misiones...")
     ids_misiones = []
     for nombre in ["Primera", "Segunda", "Tercera"]:
         res = client.post("/misiones", params={
@@ -34,32 +36,32 @@ def test_fifo_misiones():
         })
         mid = res.json()["id"]
         ids_misiones.append(mid)
-        print(f"  ➕ Misión '{nombre}' creada con ID {mid}")
+        logger.info("  ➕ Misión '%s' creada con ID %s", nombre, mid)
 
     # 3. Encolar misiones al personaje
-    print("📥 Encolando misiones...")
+    logger.info("📥 Encolando misiones...")
     for mid in ids_misiones:
         res = client.post(f"/personajes/{personaje_id}/misiones/{mid}")
-        print(f"  🔁 Misión {mid} encolada - Respuesta: {res.json()}")
+        logger.info("  🔁 Misión %s encolada - Respuesta: %s", mid, res.json())
 
     # 4. Verificar orden de la cola
-    print("🔍 Verificando orden de la cola...")
+    logger.info("🔍 Verificando orden de la cola...")
     res = client.get(f"/personajes/{personaje_id}/misiones")
     cola = res.json()
-    print("📋 Cola actual:", [m["nombre"] for m in cola])
+    logger.info("📋 Cola actual: %s", [m["nombre"] for m in cola])
     assert [m["nombre"] for m in cola] == ["Primera", "Segunda", "Tercera"]
 
     # 5. Completar una misión (debería ser la primera)
-    print("✅ Completando primera misión...")
+    logger.info("✅ Completando primera misión...")
     res = client.post(f"/personajes/{personaje_id}/completar")
-    print("📤 Respuesta:", res.json())
+    logger.info("📤 Respuesta: %s", res.json())
     assert res.json()["msg"].startswith("Misión completada")
 
     # 6. Verificar que la misión completada fue la primera
-    print("🔁 Verificando cola después de completar una misión...")
+    logger.info("🔁 Verificando cola después de completar una misión...")
     res = client.get(f"/personajes/{personaje_id}/misiones")
     cola_post = res.json()
-    print("📋 Cola actual después:", [m["nombre"] for m in cola_post])
+    logger.info("📋 Cola actual después: %s", [m["nombre"] for m in cola_post])
     assert [m["nombre"] for m in cola_post] == ["Segunda", "Tercera"]
 
-    print("✅ Test FIFO completado correctamente.")
+    logger.info("✅ Test FIFO completado correctamente.")
