@@ -6,5 +6,5 @@ if __name__ == "__main__":
     print("✅ Tablas creadas correctamente.")
 
 #Init para que no de error al importar el módulo
-#? ejecutar con el comando python inmit.py
+#? ejecutar con el comando python init.py
 #en la terminal
